@@ -66,3 +66,9 @@ python3 scripts/adaptation_eval.py
 codesign --verify --deep --strict --verbose=2 macos/build/Cortex.app
 python3 scripts/ops_readiness_check.py
 ```
+
+## Run The Backend As An In-House Service
+
+`scripts/setup_local.sh`, `scripts/start_backend.sh`, `scripts/health_check.sh` and
+`deploy/launchd/install.sh` run the backend on this machine without the packaged app. See
+`docs/INSTALLATION.md` and `docs/OPERATIONS.md`.

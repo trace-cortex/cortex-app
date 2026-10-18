@@ -64,10 +64,13 @@ class MacOSSignInQualityContractTests(unittest.TestCase):
         # no Apple client id, so the button is a real control, never a dead one.
         source = CORTEX_CLOUD_AUTH.read_text(encoding="utf-8")
 
-        self.assertIn("hasAppleSignInEntitlement", source)
+        # The entitlement probe lives in `AppleSignInSupport.isAvailable`; both the settings
+        # sign-in surface and the first-run restore step gate on that single signal.
+        self.assertIn("enum AppleSignInSupport", source)
         self.assertIn("com.apple.developer.applesignin", source)
         self.assertIn(".frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)", source)
-        self.assertIn("if canUseNativeAppleSignIn {", source)
+        self.assertIn("if AppleSignInSupport.isAvailable {", source)
+        self.assertIn("private var canUseNativeAppleSignIn: Bool { AppleSignInSupport.isAvailable }", source)
         # 4.8 regression guard: SIWA must never again be gated on the web-provider list.
         self.assertNotIn("canUseNativeAppleSignIn && backendOffersApple", source)
         # Provider-aware sign-in: a real labeled button per configured provider (never a

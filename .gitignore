@@ -1,12 +1,39 @@
+# secrets and local configuration
 .env
-.context/
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+
+# python
+.venv/
 venv/
 __pycache__/
 *.pyc
-.DS_Store
-node_modules/
-npm-debug.log*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# local runtime state, data, backups
+.run/
+.context/
 backend/data/
+backups/
+models/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+
+# build outputs
 macos/build/
 outputs/
 cortex-agent-package.zip
+node_modules/
+npm-debug.log*
+dist/
+dist-test/
+
+# os
+.DS_Store

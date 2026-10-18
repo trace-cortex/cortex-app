@@ -1,0 +1,77 @@
+# Cortex backend on a Linux host you control.
+#
+#   cp .env.example .env            # then set CORTEX_API_KEY to a long random token
+#   docker compose up -d --build    # API on 127.0.0.1:8766 (loopback only)
+#   docker compose --profile proxy up -d   # + Caddy with automatic HTTPS on $CORTEX_DOMAIN
+#   docker compose --profile worker up -d  # + external job worker (multi-tenant profile only)
+#
+# Single-user, local-first (default): just the `api` service; background jobs run inline.
+# Multi-tenant server profile: set CORTEX_SHARD_MODE=bucket, CORTEX_WORKER_MODE=external,
+# CORTEX_AUTH_ENABLED=1 etc. in .env (see deploy/cortex.env.example) and enable `worker`.
+#
+# The port is published on 127.0.0.1 only. Expose it to a network exclusively through a TLS
+# reverse proxy (the `proxy` profile, or your own) so bearer tokens never travel in clear text.
+services:
+  api:
+    build: .
+    image: cortex-backend:local
+    env_file: .env
+    environment:
+      CORTEX_HOST: 0.0.0.0
+      CORTEX_VAULT_PATH: /data/Cortex.vault
+      CORTEX_DB_PATH: /data/Cortex.vault/index.sqlite
+      CORTEX_SHARD_ROOT: /data/shards
+      CORTEX_MODEL2VEC_PATH: /models/model2vec
+      CORTEX_FORWARDED_ALLOW_IPS: "*"
+    ports:
+      - "127.0.0.1:${CORTEX_PORT:-8766}:8766"
+    volumes:
+      - cortex-data:/data
+      - ./models:/models:ro          # optional: put the model2vec model here (scripts/setup_local.sh --with-model)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8766/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    profiles: ["worker"]
+    image: cortex-backend:local
+    env_file: .env
+    environment:
+      CORTEX_VAULT_PATH: /data/Cortex.vault
+      CORTEX_DB_PATH: /data/Cortex.vault/index.sqlite
+      CORTEX_SHARD_ROOT: /data/shards
+      CORTEX_MODEL2VEC_PATH: /models/model2vec
+    command: ["python", "scripts/run_memory_worker.py", "--iterations", "0", "--interval-seconds", "${CORTEX_WORKER_INTERVAL:-30}"]
+    volumes:
+      - cortex-data:/data
+      - ./models:/models:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  proxy:
+    profiles: ["proxy"]
+    image: caddy:2
+    environment:
+      CORTEX_DOMAIN: ${CORTEX_DOMAIN:?set CORTEX_DOMAIN in .env for the proxy profile}
+    command: ["caddy", "reverse-proxy", "--from", "${CORTEX_DOMAIN}", "--to", "api:8766"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  cortex-data:
+  caddy-data:
+  caddy-config:

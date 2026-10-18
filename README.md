@@ -108,6 +108,22 @@ the smallest cited, model-calibrated context that answers the task.
 
 Cortex checks for updates on its own, so once you're on a recent build, new releases arrive automatically.
 
+## Run it in-house (your own machine or server)
+
+Everything runs on hardware you control with no account or cloud service:
+
+```bash
+scripts/setup_local.sh --with-model   # Python 3.12 venv, pinned deps, generated token, offline embeddings
+scripts/start_backend.sh              # backend on 127.0.0.1:8766
+scripts/health_check.sh               # health, readiness, auth
+deploy/launchd/install.sh             # macOS: always-on service that restarts on crash
+```
+
+Linux hosts: `docker compose up -d --build`. Details, upgrades, backups and hardening:
+[`docs/INSTALLATION.md`](docs/INSTALLATION.md), [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md),
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md), [`docs/SECURITY.md`](docs/SECURITY.md),
+[`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md).
+
 ## Build from source
 
 ```bash

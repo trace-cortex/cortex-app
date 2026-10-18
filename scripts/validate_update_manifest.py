@@ -37,7 +37,19 @@ def artifact_path(root: Path, filename: str, url: str) -> Path:
     return root / filename
 
 
-def validate(manifest_path: Path) -> dict:
+def checksums_from_file(path: Path) -> dict[str, str]:
+    """Parse a `shasum -a 256` style file into {filename: sha256}."""
+    entries: dict[str, str] = {}
+    if not path.exists():
+        return entries
+    for line in path.read_text(encoding="utf-8").splitlines():
+        parts = line.strip().split()
+        if len(parts) >= 2 and len(parts[0]) == 64:
+            entries[parts[-1].lstrip("*")] = parts[0].lower()
+    return entries
+
+
+def validate(manifest_path: Path, *, allow_remote_artifacts: bool = False) -> dict:
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     missing = sorted(REQUIRED_TOP_LEVEL - set(payload))
     if missing:
@@ -54,6 +66,8 @@ def validate(manifest_path: Path) -> dict:
 
     root = manifest_path.parent
     seen_kinds: set[str] = set()
+    remote_artifacts = 0
+    published_checksums = checksums_from_file(root / f"{payload['app']}-{payload['version']}-{payload['build']}.checksums.txt")
     for artifact in artifacts:
         missing_artifact = sorted(REQUIRED_ARTIFACT - set(artifact))
         if missing_artifact:
@@ -64,7 +78,22 @@ def validate(manifest_path: Path) -> dict:
         seen_kinds.add(kind)
         path = artifact_path(root, str(artifact["filename"]), str(artifact["url"]))
         if not path.exists():
-            raise FileNotFoundError(f"artifact not found: {path}")
+            if not allow_remote_artifacts:
+                raise FileNotFoundError(f"artifact not found: {path}")
+            # The published site feed points at release binaries hosted elsewhere (GitHub
+            # Releases); the repo keeps only latest.json + the checksums file. Validate what can
+            # be validated without the binary: an https URL and agreement with the published
+            # checksums file when it is present.
+            parsed = urlparse(str(artifact["url"]))
+            if parsed.scheme != "https":
+                raise ValueError(f"remote artifact {artifact['filename']} must use an https URL, got {artifact['url']!r}")
+            expected = published_checksums.get(str(artifact["filename"]))
+            if expected is not None and expected != str(artifact["sha256"]).lower():
+                raise ValueError(
+                    f"sha256 mismatch for {artifact['filename']}: manifest={artifact['sha256']} checksums-file={expected}"
+                )
+            remote_artifacts += 1
+            continue
         size = path.stat().st_size
         if size != int(artifact["size_bytes"]):
             raise ValueError(f"size mismatch for {path.name}: manifest={artifact['size_bytes']} actual={size}")
@@ -74,15 +103,36 @@ def validate(manifest_path: Path) -> dict:
 
     if "dmg" not in seen_kinds:
         raise ValueError("manifest must include a dmg artifact")
+    payload["_remote_artifacts"] = remote_artifacts
     return payload
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate a Cortex update manifest against local release artifacts.")
     parser.add_argument("manifest", type=Path)
+    parser.add_argument(
+        "--allow-remote-artifacts",
+        action="store_true",
+        help=(
+            "Accept artifacts that are not on disk next to the manifest when they point at an https URL "
+            "(the published site feed). Their sha256 is cross-checked against the release checksums file "
+            "when present. Release-directory validation must NOT use this flag."
+        ),
+    )
     args = parser.parse_args()
-    payload = validate(args.manifest)
-    print(json.dumps({"status": "ok", "version": payload["version"], "build": payload["build"], "artifacts": len(payload["artifacts"])}, indent=2))
+    payload = validate(args.manifest, allow_remote_artifacts=args.allow_remote_artifacts)
+    print(
+        json.dumps(
+            {
+                "status": "ok",
+                "version": payload["version"],
+                "build": payload["build"],
+                "artifacts": len(payload["artifacts"]),
+                "remote_artifacts": payload.get("_remote_artifacts", 0),
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

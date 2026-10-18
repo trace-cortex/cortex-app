@@ -316,3 +316,34 @@ The local source-account sync endpoint is enough for beta local app integrations
 - Local diagnostics and backups
 - Sanitized support bundle for operational triage
 - Future: sensitive source blocklist, hosted account deletion, per-source retention rules
+
+## In-house deployment topology
+
+Three ways to run the same backend code on infrastructure you control. All share the vault +
+SQLite storage model above; none needs an external database, queue or cache.
+
+```
+(1) Single-user, this Mac                 (2) Linux host, Docker                 (3) Multi-tenant server
+---------------------------------------   ------------------------------------   -------------------------------
+launchd: com.cortex.local.backend         docker compose: api (+worker,+proxy)   systemd/launchd: api, worker, backup
+  scripts/start_backend.sh --foreground     uvicorn backend.app.main:app           uvicorn --workers 2 (loopback)
+  uvicorn OR app.standalone_server          127.0.0.1:8766 published               Caddy / Cloudflare Tunnel -> TLS
+  127.0.0.1:8766                            volume: /data (vault + index)          sharded SQLite under CORTEX_SHARD_ROOT
+  ./backend/data/Cortex.vault               optional caddy profile (TLS)           accounts, scoped tokens, KEK
+  ./.env (token)                            ./.env (token)                         /etc/cortex/cortex.env
+
+Clients for all three: macOS app, MCP stdio bridge (scripts/cortex_mcp_stdio.py), Python/TS SDK,
+browser extension, Obsidian plugin, any HTTP client with a bearer token.
+```
+
+Entry points:
+
+| Entry point | Module | When |
+|---|---|---|
+| FastAPI app | `backend.app.main:app` via uvicorn | servers, Docker, full OpenAPI surface |
+| Standalone server | `backend/app/standalone_server.py` (stdlib `ThreadingHTTPServer`, built-in worker thread) | what the packaged macOS app launches; same routes, no uvicorn/FastAPI needed |
+| Background worker | `scripts/run_memory_worker.py` | only when `CORTEX_WORKER_MODE=external` (multi-tenant) |
+| MCP bridge | `scripts/cortex_mcp_stdio.py` | stdio to `/mcp` proxy for desktop AI tools |
+
+Operational docs: `docs/INSTALLATION.md`, `docs/CONFIGURATION.md`, `docs/OPERATIONS.md`,
+`docs/SECURITY.md`, `docs/DEPENDENCIES.md`.

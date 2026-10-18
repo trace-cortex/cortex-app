@@ -11,8 +11,12 @@ class RerankEvalGateTests(unittest.TestCase):
         prev = os.environ.get("CORTEX_EMBEDDING_PROVIDER")
         os.environ["CORTEX_EMBEDDING_PROVIDER"] = "model2vec"
         try:
-            from backend.app.embeddings import embedding_status
+            from backend.app.embeddings import embedding_status, warmup_embedding_provider
 
+            # embedding_status() reports the EFFECTIVE provider, but the hash-fallback latch is
+            # only set by a live embed. Probe first so an environment without the model2vec
+            # package (CI installs backend/requirements.txt only) skips instead of failing.
+            warmup_embedding_provider()
             if embedding_status().get("provider") != "model2vec":
                 self.skipTest("model2vec embedder unavailable in this environment")
             from scripts.rerank_eval import run_rerank_eval

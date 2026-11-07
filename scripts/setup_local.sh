@@ -107,10 +107,20 @@ else
 fi
 
 ensure_env() {
-  # Append KEY=VALUE to the env file only when KEY is absent. Never overwrites.
+  # Set KEY=VALUE in the env file when KEY is absent or present with an EMPTY value (as the
+  # placeholders in .env.example are). Never overwrites a value the operator has set.
   if ! grep -qE "^$1=" "$ENV_FILE"; then
     printf '%s=%s\n' "$1" "$2" >> "$ENV_FILE"
     log "added $1 to $(basename "$ENV_FILE")"
+  elif grep -qE "^$1=$" "$ENV_FILE"; then
+    "$VENV/bin/python" - "$ENV_FILE" "$1" "$2" <<'PY2'
+import pathlib, sys
+path, key, value = sys.argv[1:4]
+lines = pathlib.Path(path).read_text().splitlines(keepends=True)
+out = [f"{key}={value}\n" if line.rstrip("\n") == f"{key}=" else line for line in lines]
+pathlib.Path(path).write_text("".join(out))
+PY2
+    log "filled empty $1 in $(basename "$ENV_FILE")"
   fi
 }
 
@@ -134,7 +144,6 @@ PY
   # If the example file set the provider to hash, flip it to model2vec once.
   if grep -qE '^CORTEX_EMBEDDING_PROVIDER=hash$' "$ENV_FILE"; then
     sed -i.bak 's/^CORTEX_EMBEDDING_PROVIDER=hash$/CORTEX_EMBEDDING_PROVIDER=model2vec/' "$ENV_FILE" && rm -f "$ENV_FILE.bak"
-    grep -qE '^CORTEX_MODEL2VEC_PATH=' "$ENV_FILE" || printf 'CORTEX_MODEL2VEC_PATH=%s\n' "$MODEL_DIR" >> "$ENV_FILE"
     log "switched CORTEX_EMBEDDING_PROVIDER to model2vec"
   fi
 fi

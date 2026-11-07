@@ -156,7 +156,9 @@ jobs:
         run: python scripts/check_distribution_site.py
 
       - name: Validate site update manifest
-        run: python scripts/validate_update_manifest.py site/downloads/latest.json
+        # The site feed points at binaries on GitHub Releases (only latest.json + checksums are in git),
+        # so validate structure + https URLs + checksum-file agreement; release packaging stays strict.
+        run: python scripts/validate_update_manifest.py --allow-remote-artifacts site/downloads/latest.json
 
   obsidian-plugin:
     name: Obsidian plugin build

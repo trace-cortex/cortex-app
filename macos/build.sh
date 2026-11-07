@@ -52,6 +52,16 @@ cp "$ROOT/Info.plist" "$APP/Contents/Info.plist"
 plutil -replace CFBundleName -string "$PRODUCT_NAME" "$APP/Contents/Info.plist"
 plutil -replace CFBundleDisplayName -string "$DISPLAY_NAME" "$APP/Contents/Info.plist"
 plutil -replace CortexDistributionMode -string "$DISTRIBUTION_MODE" "$APP/Contents/Info.plist"
+# In-house / local-only builds: CORTEX_REQUIRE_ACCOUNT=false drops the Cortex Cloud sign-in wall
+# (CortexRequireAccount in Info.plist) so the app opens straight into the local memory engine.
+# Unset keeps whatever Info.plist says (true for the hosted-account product builds).
+if [[ -n "${CORTEX_REQUIRE_ACCOUNT:-}" ]]; then
+  case "$(printf '%s' "$CORTEX_REQUIRE_ACCOUNT" | tr '[:upper:]' '[:lower:]')" in
+    true|1|yes|on) plutil -replace CortexRequireAccount -string "true" "$APP/Contents/Info.plist" ;;
+    false|0|no|off) plutil -replace CortexRequireAccount -string "false" "$APP/Contents/Info.plist" ;;
+    *) echo "ERROR: CORTEX_REQUIRE_ACCOUNT must be true or false (got '$CORTEX_REQUIRE_ACCOUNT')" >&2; exit 2 ;;
+  esac
+fi
 if [[ -n "$PROVISIONING_PROFILE" ]]; then
   cp "$PROVISIONING_PROFILE" "$APP/Contents/embedded.provisionprofile"
 fi

@@ -101,9 +101,14 @@ lockfile.
 ## 5. macOS app (optional)
 
 ```bash
-./macos/build.sh                       # dev build, ad-hoc signed, ~2 minutes with CLT only
-open macos/build/Cortex.app
+CORTEX_REQUIRE_ACCOUNT=false ./macos/build.sh   # in-house build: no Cortex Cloud sign-in wall; ad-hoc signed, ~2 min with CLT only
+cp -R macos/build/Cortex.app /Applications/
+open /Applications/Cortex.app
 ```
+
+`CORTEX_REQUIRE_ACCOUNT=false` turns off the hosted-account wall (`CortexRequireAccount` in
+`Info.plist`) so the app opens straight into the local engine. Leave it unset to keep the product
+default.
 
 The dev build does not bundle a Python framework (`CORTEX_BUNDLE_PYTHON=0` default); it runs the
 backend with the `python3.12` found on `PATH`, so run `scripts/setup_local.sh` first and make sure

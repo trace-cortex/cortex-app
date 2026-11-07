@@ -152,7 +152,7 @@ Rotate `.run/*.log` with `newsyslog` or logrotate; the backend does not rotate t
 | Symptom | Cause | Fix |
 |---|---|---|
 | `RuntimeError: CORTEX_API_KEY uses the insecure sample token` | `.env` still has `dev-local-key` | set a random token (`scripts/setup_local.sh` does) |
-| `port 8766 may already be in use` in the macOS app | launchd service (or another backend) owns the port | run one of them, or align vault path + token (see `docs/INSTALLATION.md` section 5) |
+| `port 8766 may already be in use` in the macOS app | launchd service (or another backend) owns the port and the app could not adopt it: vault path or token differ, or the engine answered its first probe too slowly after idling | align vault path + token (see `docs/INSTALLATION.md` section 5); the app re-probes a slow engine up to three times before giving up, and the launchd plist runs the engine at standard (not background) process priority to keep cold responses fast; click Reconnect |
 | `/ready` returns 503 with `needs_configuration` | server-profile vars half-set (e.g. `CORTEX_HOSTED_RUNTIME_TIER=postgres` without a database URL) | unset them for single-user mode |
 | `/ready` 503 with diagnostics | index integrity issue | `POST /v1/maintenance/repair-storage`, then rebuild from vault |
 | `vector.available: false` in `check_vector_runtime.py` | `sqlite-vec` could not load (stdlib sqlite without extension support) | ensure `pysqlite3` built: reinstall with a C compiler + SQLite headers present |

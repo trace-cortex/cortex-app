@@ -113,7 +113,8 @@ Values are case-sensitive; booleans accept `1/true/yes/on`.
 `CORTEX_ENTITLEMENTS`, `CORTEX_CHILD_ENTITLEMENTS`, `CORTEX_DEVID_ENTITLEMENTS`,
 `CORTEX_PROVISIONING_PROFILE`, `CORTEX_DISTRIBUTION_MODE` (`direct`\|`app-store`),
 `CORTEX_APP_BUNDLE_NAME`, `CORTEX_DISPLAY_NAME`, `CORTEX_PRODUCT_NAME`, `CORTEX_SKIP_PYC`,
-`CORTEX_REQUIRE_MODEL`, `CORTEX_NOTARY_PROFILE`, `CORTEX_RELEASE_STRICT`. See `macos/build.sh` and
+`CORTEX_REQUIRE_MODEL`, `CORTEX_NOTARY_PROFILE`, `CORTEX_RELEASE_STRICT`, `CORTEX_REQUIRE_ACCOUNT`
+(`false` removes the Cortex Cloud sign-in wall for in-house builds). See `macos/build.sh` and
 `docs/APPLE_RELEASE.md`.
 
 ## Legacy prototype (not used by the app)

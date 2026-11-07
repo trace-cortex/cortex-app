@@ -67,7 +67,9 @@ cat >"$PLIST" <<EOF
   <key>ThrottleInterval</key><integer>5</integer>
   <key>StandardOutPath</key><string>$RUN_DIR/launchd.out.log</string>
   <key>StandardErrorPath</key><string>$RUN_DIR/launchd.err.log</string>
-  <key>ProcessType</key><string>Background</string>
+  <!-- Standard (not Background): a Background agent is CPU/IO-throttled while idle and its first
+       request after a quiet spell can take seconds, which trips the app's 1.5 s engine probe. -->
+  <key>ProcessType</key><string>Standard</string>
 </dict>
 </plist>
 EOF

@@ -10,7 +10,7 @@ useful. Everything runs locally; nothing leaves the Mac unless you connect an ex
 | Memory engine (backend) | `127.0.0.1:8766`, launchd agent `com.cortex.local.backend` | at login, restarts on crash |
 | Memory store (vault) | `~/Library/Application Support/Cortex/Cortex.vault` | the engine |
 | On-device semantic embeddings | `~/cortex-app/models/model2vec` (potion-base-8M) | the engine; no network |
-| Cortex app | `/Applications/Cortex.app` | you (add it to Login Items to have it always in the menu bar) |
+| Cortex app | `/Applications/Cortex.app`, built with `CORTEX_REQUIRE_ACCOUNT=false` (no cloud sign-in wall) | you (add it to Login Items to have it always in the menu bar) |
 | Claude Desktop | MCP server `cortex` in its config, token scoped read+write | Claude Desktop (restart it once) |
 | Claude Code | MCP server `cortex` in `~/.claude.json`, separate read+write token | next Claude Code session |
 

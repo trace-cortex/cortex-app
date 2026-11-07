@@ -2686,7 +2686,17 @@ final class BackendSupervisor {
         // Keep the stable MCP bridge (and its recorded interpreter path) current on every
         // backend start — this is what lets AI-app configs survive app moves and updates.
         installStableMCPBridge()
-        let initialHealth = await healthCheck(endpoint: normalizedEndpoint, apiKey: apiKey, expectedVaultPath: vaultPath)
+        // An already-running engine (launchd service, previous app instance) can take a few
+        // seconds to answer its first request after idling, which exceeds the 1.5 s probe
+        // timeout. Re-probe before concluding nothing is listening: starting a second engine on
+        // the same port is far costlier than a two-second wait.
+        var initialHealth = await healthCheck(endpoint: normalizedEndpoint, apiKey: apiKey, expectedVaultPath: vaultPath)
+        var reprobes = 0
+        while initialHealth == .unavailable, reprobes < 3 {
+            reprobes += 1
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            initialHealth = await healthCheck(endpoint: normalizedEndpoint, apiKey: apiKey, expectedVaultPath: vaultPath)
+        }
         if initialHealth == .healthy {
             return "Local memory engine connected"
         }
